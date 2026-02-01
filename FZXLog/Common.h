@@ -7,8 +7,7 @@
 
 #define FZXLOG_ANSICODE_TRACE   "\x1b[38;2;127;127;127m"    // Grey
 #define FZXLOG_ANSICODE_DEBUG   "\x1b[38;2;0;255;255m"      // Cyan
-#define FZXLOG_ANSICODE_INFO    "\x1b[38;2;255;255;255m"    // White
-#define FZXLOG_ANSICODE_SUCCESS "\x1b[38;2;0;255;0m"        // Green
+#define FZXLOG_ANSICODE_INFO    "\x1b[38;2;0;255;0m"        // Green
 #define FZXLOG_ANSICODE_WARNING "\x1b[38;2;255;255;0m"      // Yellow
 #define FZXLOG_ANSICODE_ERROR   "\x1b[38;2;255;0;0m"        // Red
 #define FZXLOG_ANSICODE_FATAL   "\x1b[38;2;255;0;255m"      // Purple
@@ -22,7 +21,6 @@ enum class Level : uint8_t {
     Trace    = 0,
     Debug    = 1,
     Info     = 2,
-    Success  = 3,
     Warning  = 4,
     Error    = 5,
     Fatal    = 6,
@@ -34,7 +32,6 @@ inline const char* levelToString(Level p_level) {
         case Level::Trace:   return "Trace";
         case Level::Debug:   return "Debug";
         case Level::Info:    return "Info";
-        case Level::Success: return "Success";
         case Level::Warning: return "Warning";
         case Level::Error:   return "Error";
         case Level::Fatal:   return "Fatal";
@@ -48,7 +45,6 @@ inline const char* getANSICode(Level p_level) {
         case Level::Trace:       return FZXLOG_ANSICODE_TRACE;
         case Level::Debug:       return FZXLOG_ANSICODE_DEBUG;
         case Level::Info:        return FZXLOG_ANSICODE_INFO;
-        case Level::Success:     return FZXLOG_ANSICODE_SUCCESS;
         case Level::Warning:     return FZXLOG_ANSICODE_WARNING;
         case Level::Error:       return FZXLOG_ANSICODE_ERROR;
         case Level::Fatal:       return FZXLOG_ANSICODE_FATAL;
@@ -108,10 +104,10 @@ struct LogRecord {
 #define FZXLOG_LEVEL_TRACE      FZXLog::Level::Trace
 #define FZXLOG_LEVEL_DEBUG      FZXLog::Level::Debug
 #define FZXLOG_LEVEL_INFO       FZXLog::Level::Info
-#define FZXLOG_LEVEL_SUCCESS    FZXLog::Level::Success
 #define FZXLOG_LEVEL_WARNING    FZXLog::Level::Warning
 #define FZXLOG_LEVEL_ERROR      FZXLog::Level::Error
 #define FZXLOG_LEVEL_FATAL      FZXLog::Level::Fatal
 #define FZXLOG_LEVEL_OFF        FZXLog::Level::Off
 
-#define FZXLOG_LOCATION(func) FZXLog::SourceLocation(__FILE__, __LINE__, func)
+#define FZXLOG_LOCATION \
+    FZXLog::SourceLocation(__FILE__, __LINE__, __FUNCTION__)
