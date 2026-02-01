@@ -7,8 +7,9 @@ using namespace FZXLog::Sink;
 
 RotationFileSink_st::RotationFileSink_st(
     const std::string& p_filename,
-    std::shared_ptr<FZXLog::FMT::BaseFormatter> p_formatter,
+    std::shared_ptr<FZXLog::Fmt::BaseFormatter> p_formatter,
     const Level& p_minLevel,
+    const Level& p_flushLevel,
     const size_t p_size,
     const int p_count,
     const size_t p_flushThreshold
@@ -100,27 +101,23 @@ void RotationFileSink_st::rotate() {
 }
 
 void RotationFileSink_st::write(
+    const SourceLocation& p_loc,
     const Level& p_level,
     const std::string& p_message,
-    const char* p_file,
-    const int p_line,
-    const char* p_func,
     const std::chrono::system_clock::time_point& p_timestamp,
     const std::thread::id& p_threadId
 ) {
-    std::string out;
+    std::string out = "";
     if (m_formatter) {
         out = m_formatter->format(
             p_level,
             p_message,
-            p_file,
-            p_line,
-            p_func,
+            p_loc.file,
+            p_loc.line,
+            p_loc.func,
             p_timestamp,
             p_threadId
         );
-    } else {
-        out = p_message;
     }
 
     if (out.empty() || out.back() != '\n') out.push_back('\n');

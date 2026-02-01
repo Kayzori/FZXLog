@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_subdirectory(FZXLog)
 
 add_executable(${PROJECT_NAME}
-    ${SRC_FILES}
+    ${FZXLOG_FILES}
     main.cpp
 )
 

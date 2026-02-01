@@ -1,29 +1,36 @@
 #include "ConsoleSink.h"
 
+#include <thread>
+#include <chrono>
 #include <iostream>
 
 void FZXLog::Sink::ConsoleSink_st::write(
+    const SourceLocation& p_loc,
     const Level& p_level,
     const std::string& p_message,
-    const char* p_file,
-    const int p_line,
-    const char* p_func,
     const std::chrono::system_clock::time_point& p_timestamp,
     const std::thread::id& p_threadId
 ) {
-    std::string out;
+    std::string out = ""; // Init as Empty
+
+    if (color) out += getANSICode(p_level);
+
+    // Format
     if (m_formatter) {
-        out = m_formatter->format(
+        out += m_formatter->format(
             p_level,
             p_message,
-            p_file,
-            p_line,
-            p_func,
+            p_loc.file,
+            p_loc.line < 0 ? -1 : p_loc.line,
+            p_loc.func,
             p_timestamp,
-            p_threadId,
-            true
+            p_threadId
         );
-    } else out = p_message;
+    }
+
+    if (color) out += FZXLOG_ANSICODE_RESET;
+
+    // Print Consol
     std::cout << out << '\n';
 }
 
