@@ -1,8 +1,8 @@
 #pragma once
 
-#include "BaseFormatter.h"
+#include "Formatter.h"
 
-// Build-In pattern macros
+// Pattern Types
 
 #define FZXLOG_FMT_PATTERN_BASIC       "[%y-%m-%d %H:%M:%S] [%l] - %v"
 #define FZXLOG_FMT_PATTERN_ADVENCED    "[%y-%m-%d %H:%M:%S.%e] [%l] [thread: %t] - %v"
@@ -10,10 +10,9 @@
 
 namespace FZXLog::Fmt {
 
-class PatternFormatter : public BaseFormatter {
+class PatternFormatter : public FZXLog::Fmt::Formatter {
 private:
-
-    // Properties
+    // Private Members
 
     std::string m_pattern;
 
@@ -21,30 +20,21 @@ public:
 
     // Constructor/Destructor
 
-    explicit PatternFormatter(
-        const std::string& p_pattern = FZXLOG_FMT_PATTERN_BASIC
-    ) :
+    PatternFormatter(const std::string& p_pattern = FZXLOG_FMT_PATTERN_BASIC) noexcept :
         m_pattern(p_pattern)
     {}
-
+    ~PatternFormatter() override = default;
+    
     // Methods
 
-    void setPattern(const std::string& p_pattern) {
-        m_pattern = p_pattern;
-    }
-    const std::string& getPattern() const {
-        return m_pattern;
-    }
-
     std::string format(
-        const Level& p_level,
+        const SourceLocation& p_location,
+        const FZXLog::Level& p_level,
         const std::string& p_message,
-        const char* p_file,
-        const int p_line,
-        const char* p_func,
         const std::chrono::system_clock::time_point& p_timestamp,
-        const std::thread::id& p_threadId
-    ) override;
+        const std::thread::id& p_thread_id
+    ) const noexcept override;
+
 };
 
 } // namespace FZXLog::Fmt

@@ -1,18 +1,20 @@
 cmake_minimum_required(VERSION 3.10.0)
 project(FZXLog VERSION 0.1.0 LANGUAGES C CXX)
 
-set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_subdirectory(FZXLog)
-
-add_executable(${PROJECT_NAME}
-    ${FZXLOG_FILES}
-    main.cpp
+file(GLOB_RECURSE PROJECT_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/FZXLog/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/FZXLog/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/FZXLog/*.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/FZXLog/*.h"
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC
-    ${CMAKE_SOURCE_DIR}/FZXLog
+add_library(FZXLog STATIC ${PROJECT_SOURCES})
+
+target_include_directories(FZXLog PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )

@@ -1,95 +1,111 @@
 #pragma once
 
-#include "../Common.h"
-#include "../Sink/Sink.h"
+#include "Logger.h"
+#include "FZXLog/Utils.h"
+#include "FZXLog/Sink/Sink.h"
 
 #include <unordered_set>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
-
-// For variadic/format logging
-#include <sstream>
-#include <format>
+#include <vector>
 
 namespace FZXLog::Logger {
 
-class SyncLogger {
-private:
-    std::unordered_set<std::shared_ptr<Sink::BaseSink>> m_sinks;
-    mutable std::mutex m_mutex;
-    Level m_level;
-    Level m_flushLevel;
+class SyncLogger : public Logger {
+protected:
+    mutable std::recursive_mutex m_mutex;
 
 public:
+
+    // Constructor/Destructor
+
     SyncLogger(
         const Level& p_level = Level::Trace,
-        const Level& p_flushLevel = Level::Error
+        const Level& p_flushLevel = Level::Error,
+        const size_t& p_log_trace_capacity = 100
     ) :
-        m_level(p_level),
-        m_flushLevel(p_flushLevel)
+        Logger(p_level, p_flushLevel, p_log_trace_capacity)
     {}
-    ~SyncLogger();
+    virtual ~SyncLogger() override = default;
 
     // Getters/Setters
-    void setLevel(const Level& p_level) {
+
+    void setLevel(const Level& p_level) override {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
         m_level = p_level;
     }
-    void flushOn(const Level& p_level) {
+    Level getLevel() const override {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
+        return m_level;
+    }
+
+    void setFlushLevel(const Level& p_level) override {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
         m_flushLevel = p_level;
+    }
+    Level getFlushLevel() const override {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
+        return m_flushLevel;
+    }
+
+    std::vector<LogRecord> getLogTrace() const override {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
+        return m_log_trace;
+    }
+
+    void setLogTraceCapacity(const size_t& p_capacity) override {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
+        m_log_trace_capacity = p_capacity;
+        while (m_log_trace.size() > m_log_trace_capacity) {
+            m_log_trace.erase(m_log_trace.begin());
+        }
+    }
+
+    size_t getLogTraceCapacity() const override {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
+        return m_log_trace_capacity;
     }
 
     // Sink management
-    void addSink(std::shared_ptr<FZXLog::Sink::BaseSink> p_sink);
-    void removeSink(std::shared_ptr<FZXLog::Sink::BaseSink> p_sink);
-    void clearSinks();
+    void addSink(std::shared_ptr<FZXLog::Sink::Sink> p_sink) override {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
+        m_sinks.emplace(std::move(p_sink));
+    }
+    void removeSink(std::shared_ptr<FZXLog::Sink::Sink> p_sink) override {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
+        m_sinks.erase(std::move(p_sink));
+    }
+    void clearSinks() override {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
+        m_sinks.clear();
+    }
+    std::vector<std::shared_ptr<FZXLog::Sink::Sink>> getSinks() const override {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
+        std::vector<std::shared_ptr<FZXLog::Sink::Sink>> sinks;
+        sinks.reserve(m_sinks.size());
+        for (const auto& sink : m_sinks) {
+            sinks.push_back(sink);
+        }
+        return sinks;
+    }
 
     // Raw log
-    void log(const SourceLocation& p_loc, const Level& p_level, const std::string& p_message);
-    inline void log(const Level& p_level, const std::string& p_message) { log(SourceLocation(), p_level, p_message); }
-
-    // Variadic log
-    template<typename... Args>
-    void logv(const SourceLocation& p_loc, const Level& p_level, Args&&... p_args) {
-        if (p_level == Level::Off)
-            return;
-        
-        std::ostringstream oss;
-        (oss << ... << std::forward<Args>(p_args));
-        log(p_loc, p_level, oss.str());
+    void log(const SourceLocation& p_loc, const Level& p_level, const std::string& p_message) override {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
+        Logger::log(p_loc, p_level, p_message);
     }
-
-    template<typename... Args> inline void logv(const Level& p_level, Args&&... p_args) { logv(SourceLocation(), p_level, std::forward<Args>(p_args)...); }
-
-    // Format log
-    template<typename... Args>
-    void logf(const SourceLocation& p_loc, const Level& p_level, std::format_string<Args...> p_fmtStr, Args&&... p_args) {
-        if (p_level == Level::Off)
-            return;
-
-        log(p_loc, p_level, std::format(p_fmtStr, std::forward<Args>(p_args)...));
-    }
-
-    template<typename... Args> inline void logf(const Level& p_level, std::format_string<Args...> p_fmtStr, Args&&... p_args) { logf(SourceLocation(), p_level, p_fmtStr, std::forward<Args>(p_args)...); }
-
-    // Level helpers
-    template<typename... Args> inline void trace(std::format_string<Args...> p_fmtStr, Args&&... p_args) { logf(Level::Trace, p_fmtStr, std::forward<Args>(p_args)...); }
-    template<typename... Args> inline void debug(std::format_string<Args...> p_fmtStr, Args&&... p_args) { logf(Level::Debug, p_fmtStr, std::forward<Args>(p_args)...); }
-    template<typename... Args> inline void info(std::format_string<Args...> p_fmtStr, Args&&... p_args) { logf(Level::Info, p_fmtStr, std::forward<Args>(p_args)...); }
-    template<typename... Args> inline void warning(std::format_string<Args...> p_fmtStr, Args&&... p_args) { logf(Level::Warning, p_fmtStr, std::forward<Args>(p_args)...); }
-    template<typename... Args> inline void error(std::format_string<Args...> p_fmtStr, Args&&... p_args) { logf(Level::Error, p_fmtStr, std::forward<Args>(p_args)...); }
-    template<typename... Args> inline void fatal(std::format_string<Args...> p_fmtStr, Args&&... p_args) { logf(Level::Fatal, p_fmtStr, std::forward<Args>(p_args)...); }
-    
-    template<typename... Args> inline void trace(const SourceLocation& p_loc, std::format_string<Args...> p_fmtStr, Args&&... p_args) { logf(p_loc, Level::Trace, p_fmtStr, std::forward<Args>(p_args)...); }
-    template<typename... Args> inline void debug(const SourceLocation& p_loc, std::format_string<Args...> p_fmtStr, Args&&... p_args) { logf(p_loc, Level::Debug, p_fmtStr, std::forward<Args>(p_args)...); }
-    template<typename... Args> inline void info(const SourceLocation& p_loc, std::format_string<Args...> p_fmtStr, Args&&... p_args) { logf(p_loc, Level::Info, p_fmtStr, std::forward<Args>(p_args)...); }
-    template<typename... Args> inline void warning(const SourceLocation& p_loc, std::format_string<Args...> p_fmtStr, Args&&... p_args) { logf(p_loc, Level::Warning, p_fmtStr, std::forward<Args>(p_args)...); }
-    template<typename... Args> inline void error(const SourceLocation& p_loc, std::format_string<Args...> p_fmtStr, Args&&... p_args) { logf(p_loc, Level::Error, p_fmtStr, std::forward<Args>(p_args)...); }
-    template<typename... Args> inline void fatal(const SourceLocation& p_loc, std::format_string<Args...> p_fmtStr, Args&&... p_args) { logf(p_loc, Level::Fatal, p_fmtStr, std::forward<Args>(p_args)...); }
+    void log(const Level& p_level, const std::string& p_message) override { log(SourceLocation(), p_level, p_message); }
 
     // Flush sinks
-    void flush();
+    void flush() override {
+        std::lock_guard<std::recursive_mutex> lk(m_mutex);
+        std::unordered_set<std::shared_ptr<Sink::Sink>> sinksCopy = m_sinks;
+        for (auto& sink : sinksCopy) {
+            if (sink) sink->flush();
+        }
+    }
 
 };
 

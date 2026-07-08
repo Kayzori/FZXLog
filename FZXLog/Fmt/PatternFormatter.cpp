@@ -3,24 +3,20 @@
 #include <sstream>
 #include <iomanip>
 
-std::string FZXLog::Fmt::PatternFormatter::format(
-    const Level& p_level,
+namespace FZXLog::Fmt {
+
+std::string PatternFormatter::format(
+    const SourceLocation& p_location,
+    const FZXLog::Level& p_level,
     const std::string& p_message,
-    const char* p_file,
-    int p_line,
-    const char* p_func,
     const std::chrono::system_clock::time_point& p_timestamp,
-    const std::thread::id& p_threadId
-) {
+    const std::thread::id& p_thread_id
+) const noexcept {
     if (p_level == Level::Off) return "";
 
-    const auto tt = std::chrono::system_clock::to_time_t(p_timestamp);
+    const std::time_t tt = std::chrono::system_clock::to_time_t(p_timestamp);
     std::tm tm{};
-#if defined(_MSC_VER)
     localtime_s(&tm, &tt);
-#else
-    localtime_r(&tt, &tm);
-#endif
 
     const auto ms =
         std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -70,23 +66,23 @@ std::string FZXLog::Fmt::PatternFormatter::format(
 
             // metadata
             case 'l':
-                out << levelToString(p_level);
+                out << FZXLogLevelToString(p_level);
                 break;
 
             case 't':
-                out << p_threadId;
+                out << p_thread_id;
                 break;
 
             case 's':
-                out << p_file;
+                out << p_location.m_file;
                 break;
 
             case '#':
-                out << p_line;
+                out << p_location.m_line;
                 break;
 
             case '!':
-                out << p_func;
+                out << p_location.m_func;
                 break;
 
             // message
@@ -102,3 +98,5 @@ std::string FZXLog::Fmt::PatternFormatter::format(
 
     return out.str();
 }
+
+} // namespace FZXLog::Fmt
